@@ -52,6 +52,41 @@ public class ProductDAO {
         return results;
     }
 
+        // Public browse/search - returns ALL products (not filtered by seller),
+    // optionally filtered by category and/or a keyword match on name.
+    public List<Product> searchProducts(String category, String keyword) throws Exception {
+        StringBuilder sql = new StringBuilder(
+            "SELECT id, seller_id, name, description, price, stock_qty, category FROM products WHERE 1=1"
+        );
+        List<Object> params = new ArrayList<>();
+
+        if (category != null && !category.isBlank()) {
+            sql.append(" AND category = ?");
+            params.add(category);
+        }
+        if (keyword != null && !keyword.isBlank()) {
+            sql.append(" AND LOWER(name) LIKE ?");
+            params.add("%" + keyword.toLowerCase() + "%");
+        }
+
+        List<Product> results = new ArrayList<>();
+
+        try (Connection conn = DataSourceListener.getDataSource().getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql.toString())) {
+
+            for (int i = 0; i < params.size(); i++) {
+                ps.setObject(i + 1, params.get(i));
+            }
+
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    results.add(mapRow(rs));
+                }
+            }
+        }
+        return results;
+    }
+
     public Product findById(long id) throws Exception {
         String sql = "SELECT id, seller_id, name, description, price, stock_qty, category FROM products WHERE id = ?";
 

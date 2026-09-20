@@ -1,6 +1,7 @@
 package com.mithra.mithramart.dao;
 
 import com.mithra.mithramart.listener.DataSourceListener;
+import com.mithra.mithramart.model.User;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -43,4 +44,27 @@ public class UserDAO {
             return false;
         }
    }
+
+       public User findByEmail(String email) throws Exception {
+        String sql = "SELECT id, name, email, password_hash, role FROM users WHERE email = ?";
+
+        try (java.sql.Connection conn = DataSourceListener.getDataSource().getConnection();
+             java.sql.PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, email);
+
+            try (java.sql.ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    User user = new User();
+                    user.setId(rs.getLong("id"));
+                    user.setName(rs.getString("name"));
+                    user.setEmail(rs.getString("email"));
+                    user.setPasswordHash(rs.getString("password_hash"));
+                    user.setRole(rs.getString("role"));
+                    return user;
+                }
+                return null; // no user found with that email
+            }
+        }
+    }
 }

@@ -2,9 +2,11 @@ package com.mithra.mithramart.dao;
 
 import com.mithra.mithramart.listener.DataSourceListener;
 import com.mithra.mithramart.model.CartItem;
+import com.mithra.mithramart.model.Order;
 
 import java.math.BigDecimal;
 import java.sql.*;
+import java.util.ArrayList;
 import java.util.List;
 
 public class OrderDAO {
@@ -74,5 +76,57 @@ public class OrderDAO {
                 conn.close();
             }
         }
+    }
+
+        // Buyer's own order history
+    public List<Order> findOrdersByBuyer(long buyerId) throws Exception {
+        String sql = "SELECT id, buyer_id, status, total_amount, created_at FROM orders WHERE buyer_id = ? ORDER BY created_at DESC";
+        List<Order> results = new ArrayList<>();
+
+        try (Connection conn = DataSourceListener.getDataSource().getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setLong(1, buyerId);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    results.add(mapOrderRow(rs));
+                }
+            }
+        }
+        return results;
+    }
+
+    // Seller's incoming orders - orders that contain at least one of their products
+    public List<Order> findOrdersForSeller(long sellerId) throws Exception {
+        String sql = "SELECT DISTINCT o.id, o.buyer_id, o.status, o.total_amount, o.created_at " +
+                     "FROM orders o " +
+                     "JOIN order_items oi ON oi.order_id = o.id " +
+                     "JOIN products p ON p.id = oi.product_id " +
+                     "WHERE p.seller_id = ? " +
+                     "ORDER BY o.created_at DESC";
+        List<Order> results = new ArrayList<>();
+
+        try (Connection conn = DataSourceListener.getDataSource().getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setLong(1, sellerId);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    results.add(mapOrderRow(rs));
+                }
+            }
+        }
+        return results;
+    }
+
+    private Order mapOrderRow(ResultSet rs) throws SQLException {
+        Order o = new Order();
+        o.setId(rs.getLong("id"));
+        o.setBuyerId(rs.getLong("buyer_id"));
+        o.setStatus(rs.getString("status"));
+        o.setTotalAmount(rs.getBigDecimal("total_amount"));
+        return o;
     }
 }
